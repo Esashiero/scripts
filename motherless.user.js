@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Motherless Download & Popup Buttons
 // @namespace    http://tampermonkey.net/
-// @version      1.5
-// @description  Adds a functional, one-click download button and a popup video player to all thumbnails.
+// @version      1.6
+// @description  Adds a functional, one-click download button (with proper titles) and a popup video player to all thumbnails.
 // @author       You & Gemini
 // @match        *://*.motherless.com/*
 // @grant        GM_xmlhttpRequest
@@ -80,15 +80,15 @@
         innerContainer.style.position = 'relative';
 
         // --- CSS FOR BIGGER BUTTONS ---
-        const buttonSize = '35px';
-        const iconSize = 25px';
+        const buttonSize = '32px'; // Increased size
+        const iconSize = '20px';   // Increased size
 
         const popupButton = document.createElement('button');
-        popupButton.style.cssText = `position: absolute; top: 5px; left: 5px; z-index: 9999; width: ${buttonSize}; height: ${buttonSize}; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px; cursor: pointer; background: rgba(0, 0, 0, 0.6) url('${popupIconUrl}') center / ${iconSize} no-repeat;`;
+        popupButton.style.cssText = `position: absolute; top: 5px; left: 5px; z-index: 9999; width: ${buttonSize}; height: ${buttonSize}; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 4px; cursor: pointer; background: rgba(0, 0, 0, 0.6) url('${popupIconUrl}') center / ${iconSize} no-repeat;`;
         innerContainer.appendChild(popupButton);
 
         const downloadButton = document.createElement('button');
-        downloadButton.style.cssText = `position: absolute; top: 5px; right: 5px; z-index: 9999; width: ${buttonSize}; height: ${buttonSize}; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px; cursor: pointer; background: rgba(0, 0, 0, 0.6) url('${downloadIconUrl}') center / ${iconSize} no-repeat;`;
+        downloadButton.style.cssText = `position: absolute; top: 5px; right: 5px; z-index: 9999; width: ${buttonSize}; height: ${buttonSize}; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 4px; cursor: pointer; background: rgba(0, 0, 0, 0.6) url('${downloadIconUrl}') center / ${iconSize} no-repeat;`;
         innerContainer.appendChild(downloadButton);
 
         // --- POPUP BUTTON FUNCTIONALITY ---
@@ -122,12 +122,21 @@
             });
         });
 
-        // --- DOWNLOAD BUTTON FUNCTIONALITY (FIXED) ---
+        // --- DOWNLOAD BUTTON FUNCTIONALITY (WITH FILENAME FIX) ---
         downloadButton.addEventListener('click', (event) => {
             event.preventDefault(); event.stopPropagation();
             const codename = thumbnail.dataset.codename;
             const videoPageUrl = thumbnail.querySelector('a.img-container').href;
             downloadButton.style.backgroundImage = `url("${loadingIconUrl}")`;
+
+            // --- NEW: Get the video title from the thumbnail ---
+            let filename = codename; // Default filename
+            const titleElement = thumbnail.querySelector('.thumb-title .title');
+            if (titleElement && titleElement.innerText.trim() !== '') {
+                // Sanitize the title to remove characters that are illegal in filenames
+                filename = titleElement.innerText.trim().replace(/[<>:"/\\|?*]+/g, '_');
+            }
+            // --- END NEW ---
 
             GM_xmlhttpRequest({
                 method: 'GET', url: videoPageUrl,
@@ -147,15 +156,13 @@
                         let finalUrl = baseUrl.replace(/&amp;/g, '&');
                         finalUrl += "&download&cd=attachment&d=1";
 
-                        // --- NEW DOWNLOAD METHOD ---
-                        // Open the special URL in a new tab, letting the browser's
-                        // native download manager take over.
-                        window.open(finalUrl, '_blank');
-                        // --- END OF NEW METHOD ---
+                        // Using GM_download is the ONLY way to set a custom filename.
+                        // If this fails on your browser, the browser is blocking it.
+                        // The popup + Quetta download remains the fallback.
+                        GM_download(finalUrl, filename + '.mp4');
 
                     } else { alert('Could not find any direct video URL on the page.'); }
 
-                    // Restore the icon after a short delay
                     setTimeout(() => {
                         downloadButton.style.backgroundImage = `url("${downloadIconUrl}")`;
                     }, 500);
