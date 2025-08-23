@@ -1,12 +1,11 @@
 // ==UserScript==
 // @name         Motherless Download & Popup Buttons
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.8
 // @description  Adds a functional, one-click download button and a popup video player to all thumbnails.
 // @author       You & Gemini
 // @match        *://*.motherless.com/*
 // @grant        GM_xmlhttpRequest
-// @grant        GM_download
 // @updateURL    https://raw.githubusercontent.com/Esashiero/scripts/main/motherless.user.js
 // @downloadURL  https://raw.githubusercontent.com/Esashiero/scripts/main/motherless.user.js
 // ==/UserScript==
@@ -122,20 +121,12 @@
             });
         });
 
-        // --- DOWNLOAD BUTTON FUNCTIONALITY (WITH CUSTOM FILENAME) ---
+        // --- DOWNLOAD BUTTON FUNCTIONALITY (RELIABLE METHOD) ---
         downloadButton.addEventListener('click', (event) => {
             event.preventDefault(); event.stopPropagation();
             const codename = thumbnail.dataset.codename;
             const videoPageUrl = thumbnail.querySelector('a.img-container').href;
             downloadButton.style.backgroundImage = `url("${loadingIconUrl}")`;
-
-            // --- NEW: Get and sanitize the video title ---
-            let videoTitle = 'video'; // Default title
-            const titleElement = thumbnail.querySelector('.thumb-title .title');
-            if (titleElement) {
-                // Replace characters that are invalid in filenames
-                videoTitle = titleElement.innerText.trim().replace(/[\\/:*?"<>|]/g, '-');
-            }
 
             GM_xmlhttpRequest({
                 method: 'GET', url: videoPageUrl,
@@ -155,11 +146,8 @@
                         let finalUrl = baseUrl.replace(/&amp;/g, '&');
                         finalUrl += "&download&cd=attachment&d=1";
 
-                        // --- NEW: Construct the full filename ---
-                        const filename = `${videoTitle} - ${codename}.mp4`;
-
-                        // --- Use GM_download to set the custom filename ---
-                        GM_download(finalUrl, filename);
+                        // --- Reverted to the most reliable download method ---
+                        window.open(finalUrl, '_blank');
 
                     } else { alert('Could not find any direct video URL on the page.'); }
 
