@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Motherless Download & Popup Buttons
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Adds a functional, one-click download button and a popup video player to all thumbnails.
 // @author       You & Gemini
 // @match        *://*.motherless.com/*
