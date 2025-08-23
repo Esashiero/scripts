@@ -80,8 +80,8 @@
         innerContainer.style.position = 'relative';
 
         // --- CSS FOR BIGGER BUTTONS ---
-        const buttonSize = '28px';
-        const iconSize = '18px';
+        const buttonSize = '35px';
+        const iconSize = 25px';
 
         const popupButton = document.createElement('button');
         popupButton.style.cssText = `position: absolute; top: 5px; left: 5px; z-index: 9999; width: ${buttonSize}; height: ${buttonSize}; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px; cursor: pointer; background: rgba(0, 0, 0, 0.6) url('${popupIconUrl}') center / ${iconSize} no-repeat;`;
