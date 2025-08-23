@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Motherless Download & Popup Buttons
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  Adds a functional, one-click download button and a popup video player to all thumbnails.
 // @author       You & Gemini
 // @match        *://*.motherless.com/*
@@ -9,13 +9,12 @@
 // @grant        GM_download
 // @updateURL    https://raw.githubusercontent.com/Esashiero/scripts/main/motherless.user.js
 // @downloadURL  https://raw.githubusercontent.com/Esashiero/scripts/main/motherless.user.js
-// ==UserScript==
+// ==/UserScript==
 
 (function() {
     'use strict';
 
     // --- 1. Create Popup Player Elements (and hide them initially) ---
-    // This runs only once when the script loads.
     const popupOverlay = document.createElement('div');
     popupOverlay.id = 'ml-popup-overlay';
     popupOverlay.innerHTML = `
@@ -41,18 +40,24 @@
             align-items: center;
             z-index: 10000;
         }
+        /* --- CSS CHANGES ARE HERE --- */
         #ml-popup-container {
             position: relative;
-            max-width: 80vw;
-            max-height: 80vh;
+            /* Remove fixed sizing from container */
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         #ml-popup-content video {
             display: block;
-            width: 100%;
-            height: 100%;
-            max-width: 80vw;
-            max-height: 80vh;
+            /* Apply constraints directly to the video */
+            max-width: 90vw;   /* Use 90% of viewport width */
+            max-height: 90vh;  /* Use 90% of viewport height */
+            /* Ensure the video scales proportionally */
+            width: auto;
+            height: auto;
         }
+        /* --- END OF CSS CHANGES --- */
         #ml-popup-close {
             position: absolute;
             top: -30px; right: 0;
@@ -86,7 +91,6 @@
     };
 
     popupOverlay.addEventListener('click', (event) => {
-        // Close if the user clicks on the dark background, but not on the video itself
         if (event.target === popupOverlay) {
             closePopup();
         }
@@ -122,14 +126,12 @@
             event.preventDefault();
             event.stopPropagation();
 
-            // Show popup with a loading spinner
             popupContent.innerHTML = '<div class="ml-loader"></div>';
             popupOverlay.style.display = 'flex';
 
             const codename = thumbnail.dataset.codename;
             const videoPageUrl = thumbnail.querySelector('a.img-container').href;
 
-            // Fetch the video URL (same logic as download button)
             GM_xmlhttpRequest({
                 method: 'GET',
                 url: videoPageUrl,
@@ -151,7 +153,6 @@
 
                     if (baseUrl) {
                         const finalUrl = baseUrl.replace(/&amp;/g, '&');
-                        // Replace loader with the actual video player
                         popupContent.innerHTML = `<video src="${finalUrl}" controls autoplay loop></video>`;
                     } else {
                         popupContent.innerText = 'Error: Could not find video source.';
@@ -169,7 +170,7 @@
             event.preventDefault(); event.stopPropagation();
             const codename = thumbnail.dataset.codename;
             const videoPageUrl = thumbnail.querySelector('a.img-container').href;
-            downloadButton.disabled = true; // Prevent multiple clicks
+            downloadButton.disabled = true;
 
             GM_xmlhttpRequest({
                 method: 'GET',
