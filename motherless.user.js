@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Motherless Download & Popup Buttons
 // @namespace    http://tampermonkey.net/
-// @version      2.2
+// @version      2.3
 // @description  Adds a download button and makes thumbnails open a popup player with slideshow controls.
 // @author       You & Gemini
 // @match        *://*.motherless.com/*
@@ -18,7 +18,6 @@
     let currentIndex = -1;
 
     // --- 1. Create Popup Player Elements ---
-    // The navigation elements are now siblings to the container for easier overlay positioning.
     const popupOverlay = document.createElement('div');
     popupOverlay.id = 'ml-popup-overlay';
     popupOverlay.innerHTML = `
@@ -49,10 +48,8 @@
         }
         #ml-popup-content video {
             display: block; width: auto; height: auto;
-            max-width: 95vw; max-height: 95vh; /* Allow video to be even bigger */
+            max-width: 95vw; max-height: 95vh;
         }
-
-        /* --- NEW OVERLAY CSS --- */
         #ml-popup-close {
             position: absolute; top: 5px; right: 10px;
             font-size: 40px; color: white; cursor: pointer;
@@ -60,15 +57,16 @@
         }
         .ml-popup-nav {
             position: absolute;
-            top: 0; height: 100%; width: 30%; /* Large clickable area */
+            top: 0; height: 100%;
+            width: 100px; /* --- CHANGE IS HERE: From 30% to a fixed, smaller width --- */
             display: flex; align-items: center;
             color: white; cursor: pointer; user-select: none;
-            opacity: 0; /* Hidden by default */
+            opacity: 0;
             transition: opacity 0.2s ease-in-out;
         }
         #ml-popup-overlay:hover .ml-popup-nav,
         #ml-popup-overlay:hover #ml-popup-close {
-             opacity: 1; /* Show on hover (for desktop) */
+             opacity: 1;
         }
         #ml-popup-prev { left: 0; justify-content: flex-start; }
         #ml-popup-next { right: 0; justify-content: flex-end; }
@@ -76,8 +74,6 @@
             font-size: 60px; font-weight: bold; font-family: sans-serif;
             padding: 0 20px; text-shadow: 0 0 8px black;
         }
-        /* --- END NEW CSS --- */
-
         .ml-loader {
             border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%;
             width: 60px; height: 60px; animation: spin 1s linear infinite;
@@ -130,7 +126,6 @@
         popupContent.innerHTML = '';
         currentIndex = -1;
     };
-    // Close when clicking the background (the overlay itself)
     popupOverlay.addEventListener('click', (event) => { if (event.target === popupOverlay) closePopup(); });
     popupCloseBtn.addEventListener('click', closePopup);
     prevBtn.addEventListener('click', () => openPopupPlayer(currentIndex - 1));
