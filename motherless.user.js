@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Motherless Download & Popup Buttons
 // @namespace    http://tampermonkey.net/
-// @version      2.1
+// @version      2.2
 // @description  Adds a download button and makes thumbnails open a popup player with slideshow controls.
 // @author       You & Gemini
 // @match        *://*.motherless.com/*
@@ -14,21 +14,20 @@
 (function() {
     'use strict';
 
-    // --- NEW: Global variables for slideshow state ---
-    let allThumbnails = []; // Will hold all thumbnail elements from the page
-    let currentIndex = -1; // Will track the currently playing video's index
+    let allThumbnails = [];
+    let currentIndex = -1;
 
     // --- 1. Create Popup Player Elements ---
+    // The navigation elements are now siblings to the container for easier overlay positioning.
     const popupOverlay = document.createElement('div');
     popupOverlay.id = 'ml-popup-overlay';
-    // Add new arrow buttons to the HTML structure
     popupOverlay.innerHTML = `
-        <span id="ml-popup-prev" class="ml-popup-nav">&lsaquo;</span>
         <div id="ml-popup-container">
-            <span id="ml-popup-close">&times;</span>
             <div id="ml-popup-content"></div>
         </div>
-        <span id="ml-popup-next" class="ml-popup-nav">&rsaquo;</span>
+        <span id="ml-popup-close">&times;</span>
+        <div id="ml-popup-prev" class="ml-popup-nav"><span>&lsaquo;</span></div>
+        <div id="ml-popup-next" class="ml-popup-nav"><span>&rsaquo;</span></div>
     `;
     document.body.appendChild(popupOverlay);
 
@@ -43,22 +42,42 @@
         #ml-popup-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.9); display: none;
-            justify-content: space-between; align-items: center; z-index: 10000;
+            justify-content: center; align-items: center; z-index: 10000;
         }
         #ml-popup-container {
-            position: relative; display: flex; justify-content: center; align-items: center;
+            display: flex; justify-content: center; align-items: center;
         }
         #ml-popup-content video {
-            display: block; max-width: 85vw; max-height: 90vh; width: auto; height: auto;
+            display: block; width: auto; height: auto;
+            max-width: 95vw; max-height: 95vh; /* Allow video to be even bigger */
         }
+
+        /* --- NEW OVERLAY CSS --- */
         #ml-popup-close {
-            position: absolute; top: -35px; right: -5px; font-size: 40px; color: white;
-            cursor: pointer; font-family: sans-serif;
+            position: absolute; top: 5px; right: 10px;
+            font-size: 40px; color: white; cursor: pointer;
+            font-family: sans-serif; text-shadow: 0 0 5px black;
         }
-        .ml-popup-nav { /* Style for the new Next/Prev buttons */
-            color: white; font-size: 60px; font-weight: bold; cursor: pointer;
-            padding: 0 15px; user-select: none; font-family: sans-serif;
+        .ml-popup-nav {
+            position: absolute;
+            top: 0; height: 100%; width: 30%; /* Large clickable area */
+            display: flex; align-items: center;
+            color: white; cursor: pointer; user-select: none;
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.2s ease-in-out;
         }
+        #ml-popup-overlay:hover .ml-popup-nav,
+        #ml-popup-overlay:hover #ml-popup-close {
+             opacity: 1; /* Show on hover (for desktop) */
+        }
+        #ml-popup-prev { left: 0; justify-content: flex-start; }
+        #ml-popup-next { right: 0; justify-content: flex-end; }
+        .ml-popup-nav span {
+            font-size: 60px; font-weight: bold; font-family: sans-serif;
+            padding: 0 20px; text-shadow: 0 0 8px black;
+        }
+        /* --- END NEW CSS --- */
+
         .ml-loader {
             border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%;
             width: 60px; height: 60px; animation: spin 1s linear infinite;
@@ -71,23 +90,16 @@
 
 
     // --- 3. The Core Function to Open a Video in the Popup ---
-    // This function is now the heart of the player.
     const openPopupPlayer = (index) => {
-        if (index < 0 || index >= allThumbnails.length) {
-            return; // Don't do anything if we're at the beginning or end
-        }
-
-        currentIndex = index; // Update the global index
-
+        if (index < 0 || index >= allThumbnails.length) { return; }
+        currentIndex = index;
         const thumbnail = allThumbnails[index];
         const codename = thumbnail.dataset.codename;
         const videoPageUrl = thumbnail.querySelector('a.img-container').href;
 
-        // Show popup with a loading spinner
         popupContent.innerHTML = '<div class="ml-loader"></div>';
         popupOverlay.style.display = 'flex';
 
-        // Fetch the video URL
         GM_xmlhttpRequest({
             method: 'GET', url: videoPageUrl,
             onload: function(response) {
@@ -115,9 +127,10 @@
     // --- 4. Popup Control Functions ---
     const closePopup = () => {
         popupOverlay.style.display = 'none';
-        popupContent.innerHTML = ''; // This stops the video
-        currentIndex = -1; // Reset index
+        popupContent.innerHTML = '';
+        currentIndex = -1;
     };
+    // Close when clicking the background (the overlay itself)
     popupOverlay.addEventListener('click', (event) => { if (event.target === popupOverlay) closePopup(); });
     popupCloseBtn.addEventListener('click', closePopup);
     prevBtn.addEventListener('click', () => openPopupPlayer(currentIndex - 1));
@@ -126,7 +139,6 @@
 
     // --- 5. Find Thumbnails, Build the Global List, and Add Listeners ---
     const thumbnailSelector = '.mobile-thumb';
-    // Use Array.from to create a static copy
     allThumbnails = Array.from(document.querySelectorAll(thumbnailSelector));
 
     const downloadIconUrl = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%23FFFFFF"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708-.708l3 3z"/></svg>';
@@ -144,15 +156,12 @@
         downloadButton.style.cssText = `position: absolute; top: 5px; right: 5px; z-index: 9999; width: ${buttonSize}; height: ${buttonSize}; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px; cursor: pointer; background: rgba(0, 0, 0, 0.6) url('${downloadIconUrl}') center / ${iconSize} no-repeat;`;
         innerContainer.appendChild(downloadButton);
 
-        // --- POPUP FUNCTIONALITY ON THE ENTIRE THUMBNAIL ---
         thumbnail.addEventListener('click', (event) => {
             if (downloadButton.contains(event.target)) { return; }
-            event.preventDefault();
-            event.stopPropagation();
-            openPopupPlayer(index); // Call the main player function with this thumbnail's index
+            event.preventDefault(); event.stopPropagation();
+            openPopupPlayer(index);
         });
 
-        // --- DOWNLOAD BUTTON FUNCTIONALITY ---
         downloadButton.addEventListener('click', (event) => {
             event.preventDefault(); event.stopPropagation();
             const codename = thumbnail.dataset.codename;
@@ -179,9 +188,7 @@
                         window.open(finalUrl, '_blank');
                     } else { alert('Could not find any direct video URL on the page.'); }
 
-                    setTimeout(() => {
-                        downloadButton.style.backgroundImage = `url("${downloadIconUrl}")`;
-                    }, 500);
+                    setTimeout(() => { downloadButton.style.backgroundImage = `url("${downloadIconUrl}")`; }, 500);
                 },
                 onerror: function() {
                     alert('An error occurred while fetching the video page.');
