@@ -1,216 +1,88 @@
 // ==UserScript==
-// @name         Motherless Download & Popup Buttons
+// @name         Motherless Popup & Download Buttons
 // @namespace    http://tampermonkey.net/
-// @version      2.4
-// @description  Adds a download button and makes thumbnails open a popup player with slideshow controls.
-// @author       You & Gemini
+// @version      0.4
+// @description  Adds popup and download buttons to thumbnails on Motherless.
+// @author       You
 // @match        *://*.motherless.com/*
-// @grant        GM_xmlhttpRequest
-// @grant        GM_download
-// @updateURL    https://raw.githubusercontent.com/Esashiero/scripts/main/motherless.user.js
-// @downloadURL  https://raw.githubusercontent.com/Esashiero/scripts/main/motherless.user.js
+// @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    let allThumbnails = [];
-    let currentIndex = -1;
-
-    // --- Icon for the new "Go to Page" link ---
-    const pageLinkIconUrl = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 16 16"><path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/><path d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/></svg>';
-
-    // --- 1. Create Popup Player Elements ---
-    const popupOverlay = document.createElement('div');
-    popupOverlay.id = 'ml-popup-overlay';
-    popupOverlay.innerHTML = `
-        <div id="ml-popup-container">
-            <div id="ml-popup-content"></div>
-        </div>
-        <a id="ml-popup-pagelink" href="#" target="_blank" title="Open Video Page"></a>
-        <span id="ml-popup-close" title="Close">&times;</span>
-        <div id="ml-popup-prev" class="ml-popup-nav"><span>&lsaquo;</span></div>
-        <div id="ml-popup-next" class="ml-popup-nav"><span>&rsaquo;</span></div>
-    `;
-    document.body.appendChild(popupOverlay);
-
-    const popupContent = document.getElementById('ml-popup-content');
-    const popupCloseBtn = document.getElementById('ml-popup-close');
-    const pageLinkBtn = document.getElementById('ml-popup-pagelink');
-    const prevBtn = document.getElementById('ml-popup-prev');
-    const nextBtn = document.getElementById('ml-popup-next');
-
-    // --- 2. Add CSS ---
-    const styles = `
-        .mobile-thumb { cursor: pointer; }
-        #ml-popup-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.9); display: none;
-            justify-content: center; align-items: center; z-index: 10000;
-        }
-        #ml-popup-container {
-            display: flex; justify-content: center; align-items: center;
-        }
-        #ml-popup-content video {
-            display: block; width: auto; height: auto;
-            max-width: 95vw; max-height: 95vh;
-        }
-
-        /* --- NEW, REFINED UI ELEMENT CSS --- */
-        #ml-popup-close, #ml-popup-pagelink {
-            position: absolute; top: 10px;
-            color: white; cursor: pointer; text-shadow: 0 0 5px black;
-            opacity: 0.7; transition: opacity 0.2s;
-        }
-        #ml-popup-close {
-            right: 10px; font-size: 40px; font-family: sans-serif;
-        }
-        #ml-popup-pagelink {
-            left: 10px; width: 24px; height: 24px;
-            background: url('${pageLinkIconUrl}') center / contain no-repeat;
-        }
-        .ml-popup-nav {
-            position: absolute; top: 50%; transform: translateY(-50%); /* Vertically center */
-            height: auto; width: auto; /* Let padding define size */
-            display: flex; align-items: center;
-            color: white; cursor: pointer; user-select: none;
-            opacity: 0.7; transition: opacity 0.2s;
-        }
-        #ml-popup-overlay:hover .ml-popup-nav,
-        #ml-popup-overlay:hover #ml-popup-close,
-        #ml-popup-overlay:hover #ml-popup-pagelink,
-        .ml-popup-nav:hover, #ml-popup-close:hover, #ml-popup-pagelink:hover {
-             opacity: 1;
-        }
-        #ml-popup-prev { left: 5px; }
-        #ml-popup-next { right: 5px; }
-        .ml-popup-nav span {
-            font-size: 60px; font-weight: bold; font-family: sans-serif;
-            padding: 20px 10px; /* Precise clickable area around icon */
-            text-shadow: 0 0 8px black;
-        }
-        /* --- END NEW CSS --- */
-
-        .ml-loader {
-            border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%;
-            width: 60px; height: 60px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    `;
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
-
-
-    // --- 3. The Core Function to Open a Video in the Popup ---
-    const openPopupPlayer = (index) => {
-        if (index < 0 || index >= allThumbnails.length) { return; }
-        currentIndex = index;
-        const thumbnail = allThumbnails[index];
-        const codename = thumbnail.dataset.codename;
-        const videoPageUrl = thumbnail.querySelector('a.img-container').href;
-
-        // --- NEW: Set the href for the "Go to Page" button ---
-        pageLinkBtn.href = videoPageUrl;
-
-        popupContent.innerHTML = '<div class="ml-loader"></div>';
-        popupOverlay.style.display = 'flex';
-
-        GM_xmlhttpRequest({
-            method: 'GET', url: videoPageUrl,
-            onload: function(response) {
-                const htmlText = response.responseText;
-                let baseUrl = null;
-                const hdRegex = new RegExp(`(https?://[^/]+/videos/${codename}-720p\\.mp4[^"']*)`);
-                const hdMatch = htmlText.match(hdRegex);
-                if (hdMatch && hdMatch[0]) { baseUrl = hdMatch[0]; }
-                else {
-                    const sdRegex = new RegExp(`(https?://[^/]+/videos/${codename}\\.mp4[^"']*)`);
-                    const sdMatch = htmlText.match(sdRegex);
-                    if (sdMatch && sdMatch[0]) { baseUrl = sdMatch[0]; }
-                }
-
-                if (baseUrl) {
-                    const finalUrl = baseUrl.replace(/&amp;/g, '&');
-                    popupContent.innerHTML = `<video src="${finalUrl}" controls autoplay loop></video>`;
-                } else { popupContent.innerText = 'Error: Could not find video source.'; }
-            },
-            onerror: function() { popupContent.innerText = 'Error: Failed to load video page.'; }
-        });
-    };
-
-
-    // --- 4. Popup Control Functions ---
-    const closePopup = () => {
-        popupOverlay.style.display = 'none';
-        popupContent.innerHTML = '';
-        pageLinkBtn.href = '#'; // Clear href on close
-        currentIndex = -1;
-    };
-    popupOverlay.addEventListener('click', (event) => { if (event.target === popupOverlay) closePopup(); });
-    popupCloseBtn.addEventListener('click', closePopup);
-    prevBtn.addEventListener('click', () => openPopupPlayer(currentIndex - 1));
-    nextBtn.addEventListener('click', () => openPopupPlayer(currentIndex + 1));
-
-
-    // --- 5. Find Thumbnails, Build the Global List, and Add Listeners ---
+    // --- 1. Identify the Thumbnails ---
     const thumbnailSelector = '.mobile-thumb';
-    allThumbnails = Array.from(document.querySelectorAll(thumbnailSelector));
+    const thumbnails = document.querySelectorAll(thumbnailSelector);
 
-    const downloadIconUrl = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%23FFFFFF"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708-.708l3 3z"/></svg>';
-    const loadingIconUrl = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background:0 0"><circle cx="50" cy="50" r="32" stroke-width="8" stroke="%23FFFFFF" stroke-dasharray="50.26548245743669 50.26548245743669" fill="none" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" dur="1s" repeatCount="indefinite" keyTimes="0;1" values="0 50 50;360 50 50"/></circle></svg>';
+    console.log(`[Motherless Userscript] Found ${thumbnails.length} thumbnails.`);
 
-    allThumbnails.forEach((thumbnail, index) => {
-        const innerContainer = thumbnail.querySelector('.mobile-thumb-inner');
-        if (!innerContainer) return;
-        innerContainer.style.position = 'relative';
+    // --- Placeholder Icons (SVG embedded as Data URIs) ---
+    const popupIconUrl = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%23FFFFFF"><path d="M3.5 2A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-4a.5.5 0 0 1 1 0v4A2.5 2.5 0 0 1 12.5 15h-9A2.5 2.5 0 0 1 1 12.5v-9A2.5 2.5 0 0 1 3.5 1h4a.5.5 0 0 1 0 1h-4zM10.5 1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-2.793L6.354 6.854a.5.5 0 1 1-.708-.708L9.793 2H7.5a.5.5 0 0 1 0-1h3z"/></svg>';
+    const downloadIconUrl = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%23FFFFFF"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>';
 
-        const buttonSize = '32px';
-        const iconSize = '20px';
 
+    // --- 2. Create and Add Buttons to Each Thumbnail ---
+    thumbnails.forEach(thumbnail => {
+
+        // --- Create the POPUP button (Top Left) ---
+        const popupButton = document.createElement('button');
+        popupButton.style.cssText = `
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            z-index: 9999;
+            width: 24px;
+            height: 24px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 3px;
+            cursor: pointer;
+            background-image: url("${popupIconUrl}");
+            background-size: 16px 16px;
+            background-repeat: no-repeat;
+            background-position: center;
+        `;
+
+        // --- Create the DOWNLOAD button (Top Right) ---
         const downloadButton = document.createElement('button');
-        downloadButton.style.cssText = `position: absolute; top: 5px; right: 5px; z-index: 9999; width: ${buttonSize}; height: ${buttonSize}; border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 3px; cursor: pointer; background: rgba(0, 0, 0, 0.6) url('${downloadIconUrl}') center / ${iconSize} no-repeat;`;
-        innerContainer.appendChild(downloadButton);
+        downloadButton.style.cssText = `
+            position: absolute;
+            top: 5px;
+            right: 5px; /* This positions it on the right */
+            z-index: 9999;
+            width: 24px;
+            height: 24px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 3px;
+            cursor: pointer;
+            background-image: url("${downloadIconUrl}");
+            background-size: 16px 16px;
+            background-repeat: no-repeat;
+            background-position: center;
+        `;
 
-        thumbnail.addEventListener('click', (event) => {
-            if (downloadButton.contains(event.target)) { return; }
-            event.preventDefault(); event.stopPropagation();
-            openPopupPlayer(index);
-        });
 
-        downloadButton.addEventListener('click', (event) => {
-            event.preventDefault(); event.stopPropagation();
-            const codename = thumbnail.dataset.codename;
-            const videoPageUrl = thumbnail.querySelector('a.img-container').href;
-            downloadButton.style.backgroundImage = `url("${loadingIconUrl}")`;
+        // Find the best container within the thumbnail for positioning
+        const innerContainer = thumbnail.querySelector('.mobile-thumb-inner');
+        if (innerContainer) {
+            innerContainer.style.position = 'relative'; // Crucial for positioning
+            innerContainer.appendChild(popupButton);
+            innerContainer.appendChild(downloadButton);
+        }
 
-            GM_xmlhttpRequest({
-                method: 'GET', url: videoPageUrl,
-                onload: function(response) {
-                    const htmlText = response.responseText;
-                    let baseUrl = null;
-                    const hdRegex = new RegExp(`(https?://[^/]+/videos/${codename}-720p\\.mp4[^"']*)`);
-                    const hdMatch = htmlText.match(hdRegex);
-                    if (hdMatch && hdMatch[0]) { baseUrl = hdMatch[0]; }
-                    else {
-                        const sdRegex = new RegExp(`(https?://[^/]+/videos/${codename}\\.mp4[^"']*)`);
-                        const sdMatch = htmlText.match(sdRegex);
-                        if (sdMatch && sdMatch[0]) { baseUrl = sdMatch[0]; }
-                    }
+        // --- 3. Add Functionality to the buttons ---
+        const openGoogle = (event) => {
+            // Stop the original link from being followed
+            event.preventDefault();
+            event.stopPropagation();
 
-                    if (baseUrl) {
-                        let finalUrl = baseUrl.replace(/&amp;/g, '&');
-                        finalUrl += "&download&cd=attachment&d=1";
-                        window.open(finalUrl, '_blank');
-                    } else { alert('Could not find any direct video URL on the page.'); }
+            // Open google.com in a new tab
+            window.open('https://www.google.com', '_blank');
+        };
 
-                    setTimeout(() => { downloadButton.style.backgroundImage = `url("${downloadIconUrl}")`; }, 500);
-                },
-                onerror: function() {
-                    alert('An error occurred while fetching the video page.');
-                    downloadButton.style.backgroundImage = `url("${downloadIconUrl}")`;
-                }
-            });
-        });
+        popupButton.addEventListener('click', openGoogle);
+        downloadButton.addEventListener('click', openGoogle);
     });
 })();
