@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Motherless Download & Popup Buttons
 // @namespace    http://tampermonkey.net/
-// @version      2.3
+// @version      2.4
 // @description  Adds a download button and makes thumbnails open a popup player with slideshow controls.
 // @author       You & Gemini
 // @match        *://*.motherless.com/*
@@ -17,6 +17,9 @@
     let allThumbnails = [];
     let currentIndex = -1;
 
+    // --- Icon for the new "Go to Page" link ---
+    const pageLinkIconUrl = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 16 16"><path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/><path d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/></svg>';
+
     // --- 1. Create Popup Player Elements ---
     const popupOverlay = document.createElement('div');
     popupOverlay.id = 'ml-popup-overlay';
@@ -24,7 +27,8 @@
         <div id="ml-popup-container">
             <div id="ml-popup-content"></div>
         </div>
-        <span id="ml-popup-close">&times;</span>
+        <a id="ml-popup-pagelink" href="#" target="_blank" title="Open Video Page"></a>
+        <span id="ml-popup-close" title="Close">&times;</span>
         <div id="ml-popup-prev" class="ml-popup-nav"><span>&lsaquo;</span></div>
         <div id="ml-popup-next" class="ml-popup-nav"><span>&rsaquo;</span></div>
     `;
@@ -32,6 +36,7 @@
 
     const popupContent = document.getElementById('ml-popup-content');
     const popupCloseBtn = document.getElementById('ml-popup-close');
+    const pageLinkBtn = document.getElementById('ml-popup-pagelink');
     const prevBtn = document.getElementById('ml-popup-prev');
     const nextBtn = document.getElementById('ml-popup-next');
 
@@ -50,30 +55,42 @@
             display: block; width: auto; height: auto;
             max-width: 95vw; max-height: 95vh;
         }
+
+        /* --- NEW, REFINED UI ELEMENT CSS --- */
+        #ml-popup-close, #ml-popup-pagelink {
+            position: absolute; top: 10px;
+            color: white; cursor: pointer; text-shadow: 0 0 5px black;
+            opacity: 0.7; transition: opacity 0.2s;
+        }
         #ml-popup-close {
-            position: absolute; top: 5px; right: 10px;
-            font-size: 40px; color: white; cursor: pointer;
-            font-family: sans-serif; text-shadow: 0 0 5px black;
+            right: 10px; font-size: 40px; font-family: sans-serif;
+        }
+        #ml-popup-pagelink {
+            left: 10px; width: 24px; height: 24px;
+            background: url('${pageLinkIconUrl}') center / contain no-repeat;
         }
         .ml-popup-nav {
-            position: absolute;
-            top: 0; height: 100%;
-            width: 100px; /* --- CHANGE IS HERE: From 30% to a fixed, smaller width --- */
+            position: absolute; top: 50%; transform: translateY(-50%); /* Vertically center */
+            height: auto; width: auto; /* Let padding define size */
             display: flex; align-items: center;
             color: white; cursor: pointer; user-select: none;
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
+            opacity: 0.7; transition: opacity 0.2s;
         }
         #ml-popup-overlay:hover .ml-popup-nav,
-        #ml-popup-overlay:hover #ml-popup-close {
+        #ml-popup-overlay:hover #ml-popup-close,
+        #ml-popup-overlay:hover #ml-popup-pagelink,
+        .ml-popup-nav:hover, #ml-popup-close:hover, #ml-popup-pagelink:hover {
              opacity: 1;
         }
-        #ml-popup-prev { left: 0; justify-content: flex-start; }
-        #ml-popup-next { right: 0; justify-content: flex-end; }
+        #ml-popup-prev { left: 5px; }
+        #ml-popup-next { right: 5px; }
         .ml-popup-nav span {
             font-size: 60px; font-weight: bold; font-family: sans-serif;
-            padding: 0 20px; text-shadow: 0 0 8px black;
+            padding: 20px 10px; /* Precise clickable area around icon */
+            text-shadow: 0 0 8px black;
         }
+        /* --- END NEW CSS --- */
+
         .ml-loader {
             border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%;
             width: 60px; height: 60px; animation: spin 1s linear infinite;
@@ -92,6 +109,9 @@
         const thumbnail = allThumbnails[index];
         const codename = thumbnail.dataset.codename;
         const videoPageUrl = thumbnail.querySelector('a.img-container').href;
+
+        // --- NEW: Set the href for the "Go to Page" button ---
+        pageLinkBtn.href = videoPageUrl;
 
         popupContent.innerHTML = '<div class="ml-loader"></div>';
         popupOverlay.style.display = 'flex';
@@ -124,6 +144,7 @@
     const closePopup = () => {
         popupOverlay.style.display = 'none';
         popupContent.innerHTML = '';
+        pageLinkBtn.href = '#'; // Clear href on close
         currentIndex = -1;
     };
     popupOverlay.addEventListener('click', (event) => { if (event.target === popupOverlay) closePopup(); });
