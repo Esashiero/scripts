@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Motherless Download & Popup Buttons
 // @namespace    http://tampermonkey.net/
-// @version      2.6
+// @version      2.7
 // @description  Adds a download button and makes thumbnails open a popup player with slideshow controls.
 // @author       You & Gemini
 // @match        *://*.motherless.com/*
@@ -18,7 +18,7 @@
     let currentIndex = -1;
     const originalPageTitle = document.title;
 
-    const pageLinkIconUrl = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 16 16"><path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/><path d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/></svg>';
+    const pageLinkIconUrl = 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 16 16"><path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/><path d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/></svg>';
 
     // --- 1. Create Popup Player Elements ---
     const popupOverlay = document.createElement('div');
@@ -36,7 +36,7 @@
     document.body.appendChild(popupOverlay);
 
     const popupContent = document.getElementById('ml-popup-content');
-    const popupTitle = document.getElementById('ml-popup-title'); // NEW: Reference to the title element
+    const popupTitle = document.getElementById('ml-popup-title');
     const popupCloseBtn = document.getElementById('ml-popup-close');
     const pageLinkBtn = document.getElementById('ml-popup-pagelink');
     const prevBtn = document.getElementById('ml-popup-prev');
@@ -51,14 +51,13 @@
             justify-content: center; align-items: center; z-index: 10000;
         }
         #ml-popup-container {
-            display: flex; flex-direction: column; /* Allow items to stack vertically */
+            display: flex; flex-direction: column;
             justify-content: center; align-items: center;
         }
         #ml-popup-content video {
             display: block; width: auto; height: auto;
-            max-width: 95vw; max-height: 85vh; /* Adjust max-height to make room for title */
+            max-width: 95vw; max-height: 85vh;
         }
-        /* NEW: Styles for the video title */
         #ml-popup-title {
             color: white; text-align: center; margin-top: 10px; max-width: 80vw;
             font-size: 16px; font-family: sans-serif;
@@ -74,7 +73,7 @@
         #ml-popup-pagelink {
             left: 10px; width: 24px; height: 24px;
             background: url('${pageLinkIconUrl}') center / contain no-repeat;
-            display: block; /* --- FIX: This makes the button visible --- */
+            display: block;
         }
         .ml-popup-nav {
             position: absolute; top: 50%; transform: translateY(-50%);
@@ -95,6 +94,13 @@
             font-size: 60px; font-weight: bold; font-family: sans-serif;
             padding: 20px 10px; text-shadow: 0 0 8px black;
         }
+
+        /* --- NEW CSS TO HIDE THE BIG CENTRAL PLAY BUTTON --- */
+        #ml-popup-content video::-webkit-media-controls-overlay-play-button {
+            display: none !important;
+        }
+        /* --- END OF NEW CSS --- */
+
         .ml-loader {
             border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%;
             width: 60px; height: 60px; animation: spin 1s linear infinite;
@@ -119,9 +125,9 @@
         const titleElement = thumbnail.querySelector('.thumb-title .title');
         if (titleElement) {
             document.title = titleElement.innerText.trim();
-            popupTitle.innerText = titleElement.innerText.trim(); // NEW: Set the popup title
+            popupTitle.innerText = titleElement.innerText.trim();
         } else {
-            popupTitle.innerText = ''; // Clear it if no title exists
+            popupTitle.innerText = '';
         }
 
         popupContent.innerHTML = '<div class="ml-loader"></div>';
@@ -155,7 +161,7 @@
     const closePopup = () => {
         popupOverlay.style.display = 'none';
         popupContent.innerHTML = '';
-        popupTitle.innerText = ''; // NEW: Clear the popup title
+        popupTitle.innerText = '';
         pageLinkBtn.href = '#';
         currentIndex = -1;
         document.title = originalPageTitle;
@@ -176,7 +182,7 @@
     allThumbnails.forEach((thumbnail, index) => {
         const innerContainer = thumbnail.querySelector('.mobile-thumb-inner');
         if (!innerContainer) return;
-        innerContainer.style.position = 'relative';
+        inner.style.position = 'relative';
 
         const buttonSize = '32px';
         const iconSize = '20px';
