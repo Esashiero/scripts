@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ThisVid Download & Popup Buttons
 // @namespace    http://tampermonkey.net/
-// 1@version      1.5
+// @version      1.5
 // @description  Adds download and popup buttons to thisvid.com thumbnails, opens videos in a popup player.
 // @author       You
 // @match        *://*.thisvid.com/*
