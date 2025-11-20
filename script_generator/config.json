@@ -1,0 +1,5 @@
+{
+  "website_name": "example",
+  "main_page_url": "https://www.example.com",
+  "video_page_url_pattern": "https://www.example.com/video/{videoId}"
+}
