@@ -19,7 +19,7 @@
     // ==========================================
     // 0. GITHUB CONFIGURATION (EDIT THIS!)
     // ==========================================
-    const GITHUB_TOKEN = "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";
+    const GITHUB_TOKEN = "PLACEHOLDER_TOKEN_DO_NOT_PUSH";
     const GITHUB_USER = "Esashiero";
     const GITHUB_REPO = "scripts";
     const GITHUB_FILE = "db.json";
