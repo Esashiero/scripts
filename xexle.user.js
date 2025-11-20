@@ -19,10 +19,10 @@
     // ==========================================
     // 0. GITHUB CONFIGURATION (EDIT THIS!)
     // ==========================================
-    const GITHUB_TOKEN = "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"; // Your Personal Access Token
-    const GITHUB_USER  = "Esashiero";                             // Your GitHub Username
-    const GITHUB_REPO  = "scripts";                               // Your Repository Name
-    const GITHUB_FILE  = "db.json";                                  // File name
+    const GITHUB_TOKEN = "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";
+    const GITHUB_USER = "Esashiero";
+    const GITHUB_REPO = "scripts";
+    const GITHUB_FILE = "db.json";
 
     // Construct API URL
     const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${GITHUB_FILE}`;
@@ -120,7 +120,7 @@
             .xexle-input { width: 100%; padding: 6px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #553b25; box-sizing: border-box; }
             .xexle-progress-container { width: 100%; background-color: #ddd; height: 8px; border-radius: 4px; margin-top: 10px; overflow: hidden; }
             .xexle-progress-bar { height: 100%; background-color: #4CAF50; width: 0%; transition: width 0.3s; }
-            
+
             #xexle-mini-btn {
                 position: fixed; top: 60px; right: 10px; width: 32px; height: 32px;
                 background: #dbc1ac; border: 2px solid #553b25; border-radius: 50%;
@@ -233,7 +233,7 @@
                         try {
                             const content = base64ToUnicode(data.content);
                             const remoteDB = JSON.parse(content);
-                            
+
                             // Merge Remote into Local
                             let updates = 0;
                             for (const user in remoteDB) {
@@ -266,7 +266,7 @@
     function pushToGitHub(callback) {
         const contentStr = JSON.stringify(memoryCache);
         const base64Content = unicodeToBase64(contentStr);
-        
+
         const payload = {
             message: "Update xexle db " + new Date().toISOString(),
             content: base64Content,
@@ -303,7 +303,7 @@
     async function startLogic() {
         await openDB();
         memoryCache = await getAllUsers();
-        
+
         // Render Local Data
         Object.keys(memoryCache).forEach(u => updateDOMCard(u));
         applyDOMFilters();
@@ -442,7 +442,7 @@
         let displayList = data.galleries.filter(g => !IGNORED_FOR_DISPLAY.some(ig => g.name.toLowerCase() === ig.toLowerCase()));
         if (displayList.length === 0 && data.galleries.length > 0) displayList = data.galleries;
         displayList.sort((a, b) => b.count - a.count);
-        
+
         const top3 = displayList.slice(0, 3).map(g => `<li>${g.name} <b>(${g.count})</b></li>`).join('');
         const badge = document.createElement('div');
         badge.className = 'xexle-stat-badge';
