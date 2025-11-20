@@ -18,7 +18,7 @@
     // ==========================================
     // 0. GITHUB CONFIGURATION (EDIT THIS!)
     // ==========================================
-    const GITHUB_TOKEN ="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";
+    const GITHUB_TOKEN ="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";
     const GITHUB_USER = "Esashiero";
     const GITHUB_REPO = "scripts";
     const GITHUB_FILE = "motherless_watched.json";
